@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/webhook",
+      "destination": "https://mcsn8n.giize.com/webhook/sui-copilot"
+    }
+  ]
+}

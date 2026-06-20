@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SuiGuard v2 — AI Security Copilot</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+    :root {
+      --bg:      #080b10;
+      --surf:    #0d1117;
+      --surf2:   #111820;
+      --border:  #1e2a3a;
+      --border2: #243044;
+      --blue:    #3b82f6;
+      --blue2:   #1d4ed8;
+      --cyan:    #22d3ee;
+      --green:   #22c55e;
+      --red:     #ef4444;
+      --orange:  #f97316;
+      --yellow:  #f59e0b;
+      --purple:  #a855f7;
+      --muted:   #4b6080;
+      --text:    #c9d8ea;
+      --dim:     #6b8299;
+      --mono:    'IBM Plex Mono', monospace;
+      --sans:    'IBM Plex Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surf);
+      flex-shrink: 0;
+      gap: 12px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, #1d4ed8, #22d3ee);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .logo-text { font-family: var(--mono); font-weight: 600; font-size: .95rem; color: #e2eaf4; }
+    .logo-text em { color: var(--cyan); font-style: normal; }
+    .logo-ver { font-family: var(--mono); font-size: .65rem; color: var(--muted); margin-left: 6px; }
+
+    .hbadges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .hbadge {
+      font-family: var(--mono); font-size: .64rem;
+      padding: 3px 9px; border-radius: 20px; border: 1px solid;
+      white-space: nowrap;
+    }
+    .hb-sui    { color: #60a5fa; border-color: #1e3a5f; background: #0a1929; }
+    .hb-walrus { color: var(--cyan); border-color: #0e3344; background: #071820; }
+    .hb-live   { color: var(--green); border-color: #14532d; background: #071a0f; }
+    .dot { display:inline-block; width:5px; height:5px; border-radius:50%;
+           background:var(--green); margin-right:4px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* LAYOUT */
+    .layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 260px; flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      background: var(--surf);
+      display: flex; flex-direction: column;
+      overflow-y: auto;
+    }
+    .sb-section { padding: 14px; border-bottom: 1px solid var(--border); }
+    .sb-label {
+      font-family: var(--mono); font-size: .62rem;
+      color: var(--muted); letter-spacing: .1em;
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+    .sb-input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--text); font-family: var(--mono);
+      font-size: .72rem; padding: 7px 9px; outline: none; margin-bottom: 8px;
+      transition: border-color .2s;
+    }
+    .sb-input:focus { border-color: var(--blue); }
+    .sb-input::placeholder { color: var(--muted); }
+    .contract-ta {
+      width: 100%; height: 190px; resize: vertical;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--text); font-family: var(--mono);
+      font-size: .7rem; padding: 9px; outline: none; line-height: 1.55;
+      transition: border-color .2s;
+    }
+    .contract-ta:focus { border-color: var(--blue); }
+    .contract-ta::placeholder { color: var(--muted); }
+
+    /* Quick actions */
+    .qbtns { display: flex; flex-direction: column; gap: 5px; }
+    .qbtn {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; color: var(--dim); font-family: var(--mono);
+      font-size: .7rem; padding: 7px 9px; cursor: pointer; text-align: left;
+      transition: all .15s;
+    }
+    .qbtn:hover { border-color: var(--blue); color: var(--text); background: #0a1929; }
+
+    /* Walrus log */
+    .walrus-log { flex: 1; overflow-y: auto; padding: 10px 14px; min-height: 0; }
+    .wentry {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; padding: 8px 10px; margin-bottom: 7px;
+      font-family: var(--mono); font-size: .66rem;
+    }
+    .wentry-time { color: var(--muted); margin-bottom: 3px; }
+    .wentry-proj { color: var(--cyan); font-weight: 600; margin-bottom: 5px; }
+    .wentry-links { display: flex; flex-direction: column; gap: 3px; }
+    .wentry-link { color: var(--blue); cursor: pointer; }
+    .wentry-link:hover { text-decoration: underline; }
+    .wentry-empty { color: var(--muted); font-family: var(--mono); font-size: .7rem; text-align: center; padding: 20px 0; }
+
+    /* CENTER — chat + results */
+    .center { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* TABS */
+    .tabs {
+      display: flex; gap: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surf);
+      flex-shrink: 0;
+    }
+    .tab {
+      padding: 10px 18px; cursor: pointer;
+      font-family: var(--mono); font-size: .75rem;
+      color: var(--dim); border-bottom: 2px solid transparent;
+      transition: all .15s; white-space: nowrap;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+    .tab-badge {
+      display: inline-block; background: var(--border2);
+      border-radius: 10px; padding: 1px 6px;
+      font-size: .6rem; margin-left: 5px; color: var(--muted);
+    }
+    .tab.active .tab-badge { background: #0e3344; color: var(--cyan); }
+    .tab-new { background: var(--red); color: white; border-radius: 10px;
+               padding: 1px 5px; font-size: .58rem; margin-left: 4px; }
+
+    /* PANELS */
+    .panels { flex: 1; overflow: hidden; position: relative; }
+    .panel {
+      position: absolute; inset: 0;
+      display: none; flex-direction: column; overflow: hidden;
+    }
+    .panel.active { display: flex; }
+
+    /* CHAT PANEL */
+    .messages {
+      flex: 1; overflow-y: auto; padding: 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .messages::-webkit-scrollbar { width: 3px; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    .welcome {
+      background: var(--surf); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px; max-width: 580px;
+    }
+    .welcome h2 { font-family: var(--mono); font-size: .95rem; color: var(--cyan); margin-bottom: 10px; }
+    .welcome p  { font-size: .85rem; color: var(--dim); line-height: 1.6; margin-bottom: 14px; }
+    .caps { display: flex; flex-direction: column; gap: 7px; }
+    .cap  { font-family: var(--mono); font-size: .72rem; color: var(--dim); display: flex; gap: 8px; }
+    .cap span:first-child { color: var(--cyan); flex-shrink: 0; }
+
+    /* Msg bubbles */
+    .msg { display: flex; gap: 10px; max-width: 780px; }
+    .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+    .avatar {
+      width: 30px; height: 30px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+    .msg.user .avatar     { background: linear-gradient(135deg, #1e3a5f, #2563eb); }
+    .msg.assistant .avatar { background: linear-gradient(135deg, #0e3344, #0891b2); }
+    .bubble {
+      background: var(--surf); border: 1px solid var(--border);
+      border-radius: 9px; padding: 12px 14px;
+      font-size: .85rem; line-height: 1.65; max-width: 640px;
+    }
+    .msg.user .bubble {
+      background: #0a1929; border-color: #1e3a5f;
+      color: #93c5fd; font-family: var(--mono); font-size: .78rem;
+    }
+    .bubble pre {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 5px; padding: 10px; margin: 8px 0;
+      overflow-x: auto; font-family: var(--mono); font-size: .72rem; line-height: 1.5;
+    }
+    .bubble code {
+      font-family: var(--mono); font-size: .78em;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 3px; padding: 1px 4px;
+    }
+    .thinking {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--muted); font-family: var(--mono); font-size: .78rem; padding: 6px 0;
+    }
+    .dots span {
+      display: inline-block; width: 5px; height: 5px;
+      border-radius: 50%; background: var(--blue); margin: 0 2px;
+      animation: bonce 1.2s infinite;
+    }
+    .dots span:nth-child(2) { animation-delay: .2s; }
+    .dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes bonce { 0%,80%,100%{transform:translateY(0);opacity:.4} 40%{transform:translateY(-5px);opacity:1} }
+
+    /* Walrus results row in bubble */
+    .walrus-row {
+      display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px;
+    }
+    .w-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      border: 1px solid; border-radius: 5px;
+      padding: 5px 10px; font-family: var(--mono); font-size: .68rem;
+      cursor: pointer; text-decoration: none; transition: opacity .15s;
+    }
+    .w-pill:hover { opacity: .8; }
+    .w-audit  { color: var(--cyan);   border-color: #0e3344; background: #071820; }
+    .w-fix    { color: var(--green);  border-color: #14532d; background: #071a0f; }
+    .w-sim    { color: var(--orange); border-color: #431407; background: #180a03; }
+
+    /* Verdict colors */
+    .v-crit   { color: var(--red);    font-weight: 600; }
+    .v-high   { color: var(--orange); font-weight: 600; }
+    .v-warn   { color: var(--yellow); font-weight: 600; }
+    .v-safe   { color: var(--green);  font-weight: 600; }
+    .v-info   { color: var(--blue);   font-weight: 600; }
+
+    /* INPUT BAR */
+    .input-bar {
+      border-top: 1px solid var(--border); background: var(--surf);
+      padding: 12px 20px; flex-shrink: 0;
+    }
+    .input-row { display: flex; gap: 8px; align-items: flex-end; }
+    .msg-input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 7px; color: var(--text); font-family: var(--sans);
+      font-size: .875rem; padding: 11px 13px; outline: none; resize: none;
+      min-height: 44px; max-height: 110px; line-height: 1.5;
+      transition: border-color .2s;
+    }
+    .msg-input:focus { border-color: var(--blue); }
+    .msg-input::placeholder { color: var(--muted); }
+    .send-btn {
+      background: var(--blue); border: none; border-radius: 7px;
+      color: white; width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 16px; flex-shrink: 0;
+      transition: background .15s;
+    }
+    .send-btn:hover { background: var(--blue2); }
+    .send-btn:disabled { background: var(--border2); cursor: not-allowed; }
+    .input-hint { font-family: var(--mono); font-size: .62rem; color: var(--muted); margin-top: 7px; }
+
+    /* RESULT PANELS (Fix / Attack Sim / Report) */
+    .result-panel {
+      flex: 1; overflow-y: auto; padding: 20px;
+      font-family: var(--mono); font-size: .78rem; line-height: 1.65;
+    }
+    .result-panel::-webkit-scrollbar { width: 3px; }
+    .result-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    .result-empty {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; color: var(--muted); font-family: var(--mono); font-size: .8rem;
+      text-align: center; gap: 10px;
+    }
+    .result-empty .icon { font-size: 2rem; opacity: .4; }
+
+    /* Code block in result panels */
+    .rcode {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 14px; margin: 10px 0;
+      overflow-x: auto; font-size: .73rem; line-height: 1.55; color: var(--text);
+      white-space: pre;
+    }
+
+    /* Section headers in panels */
+    .rh1 { color: var(--cyan); font-size: .85rem; font-weight: 600;
+            margin: 18px 0 8px; padding-bottom: 6px;
+            border-bottom: 1px solid var(--border); }
+    .rh2 { color: var(--yellow); font-size: .78rem; font-weight: 600; margin: 12px 0 5px; }
+
+    /* Exploit block */
+    .exploit-block {
+      background: var(--surf2); border: 1px solid var(--border);
+      border-left: 3px solid var(--red); border-radius: 6px;
+      padding: 12px; margin: 10px 0;
+    }
+    .exploit-block.high   { border-left-color: var(--orange); }
+    .exploit-block.medium { border-left-color: var(--yellow); }
+    .exploit-block.low    { border-left-color: var(--muted); }
+
+    .fix-block {
+      background: var(--surf2); border: 1px solid var(--border);
+      border-left: 3px solid var(--green); border-radius: 6px;
+      padding: 12px; margin: 10px 0;
+    }
+
+    /* Copy button */
+    .copy-btn {
+      float: right; background: var(--border2); border: none;
+      border-radius: 4px; color: var(--dim); font-family: var(--mono);
+      font-size: .65rem; padding: 3px 8px; cursor: pointer; margin-top: -2px;
+      transition: all .15s;
+    }
+    .copy-btn:hover { background: var(--blue2); color: white; }
+
+    /* Summary bar */
+    .summary-bar {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      background: var(--surf); border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+    }
+    .sstat {
+      font-family: var(--mono); font-size: .7rem;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .sstat-val { font-weight: 600; }
+    .sc { color: var(--red); }
+    .sh { color: var(--orange); }
+    .sm { color: var(--yellow); }
+    .sl { color: var(--muted); }
+    .sg { color: var(--green); }
+    .sp { color: var(--purple); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <div class="logo-text">Sui<em>Guard</em> <span class="logo-ver">v2.0</span></div>
+  </div>
+  <div class="hbadges">
+    <span class="hbadge hb-live"><span class="dot"></span>LIVE</span>
+    <span class="hbadge hb-sui">⚡ SUI MOVE</span>
+    <span class="hbadge hb-walrus">🌊 WALRUS</span>
+    <span class="hbadge" style="color:var(--purple);border-color:#3b0764;background:#0f0520;">🤖 n8n ENGINE</span>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">Project</div>
+      <input class="sb-input" id="projectName" placeholder="Project name..."/>
+      <div class="sb-label">Contract Code</div>
+      <textarea class="contract-ta" id="contractCode"
+        placeholder="Paste your Move contract here...&#10;&#10;module myproject::vault {&#10;  ...&#10;}"></textarea>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Quick Actions</div>
+      <div class="qbtns">
+        <button class="qbtn" onclick="quick('Is this contract safe to deploy?')">
+          🔍 Quick security scan
+        </button>
+        <button class="qbtn" onclick="quick('Generate a full audit report and store it on Walrus')">
+          📋 Full audit + Walrus
+        </button>
+        <button class="qbtn" onclick="quick('Check for access control vulnerabilities')">
+          🔐 Access control check
+        </button>
+        <button class="qbtn" onclick="quick('Check for flash loan attack vectors')">
+          ⚡ Flash loan check
+        </button>
+        <button class="qbtn" onclick="quick('Suggest gas optimizations for this contract')">
+          ⛽ Gas optimization
+        </button>
+        <button class="qbtn" onclick="quick('Check integer overflow and underflow risks')">
+          🔢 Arithmetic safety
+        </button>
+      </div>
+    </div>
+
+    <div class="sb-section" style="flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:120px;">
+      <div class="sb-label">Walrus Audit Log</div>
+      <div class="walrus-log" id="walrusLog">
+        <div class="wentry-empty">Audit reports<br/>appear here</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="center">
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('chat')"    id="tab-chat">
+        💬 Copilot Chat
+      </div>
+      <div class="tab" onclick="switchTab('audit')"   id="tab-audit">
+        📋 Audit Report <span class="tab-badge" id="badge-audit">—</span>
+      </div>
+      <div class="tab" onclick="switchTab('fix')"     id="tab-fix">
+        🔧 Fixed Contract <span class="tab-badge" id="badge-fix">—</span>
+      </div>
+      <div class="tab" onclick="switchTab('sim')"     id="tab-sim">
+        💀 Attack Sim <span class="tab-badge" id="badge-sim">—</span>
+      </div>
+    </div>
+
+    <!-- PANELS -->
+    <div class="panels">
+
+      <!-- CHAT PANEL -->
+      <div class="panel active" id="panel-chat" style="flex-direction:column;">
+        <div class="messages" id="messages">
+          <div class="welcome">
+            <h2>🛡️ SuiGuard — AI Security Copilot</h2>
+            <p>Real-time security partner for Sui Move developers. All 6 security functions powered by n8n + Claude + Walrus.</p>
+            <div class="caps">
+              <div class="cap"><span>→</span><span>Paste contract in sidebar, ask <strong style="color:var(--text)">"is this safe?"</strong></span></div>
+              <div class="cap"><span>→</span><span>Say <strong style="color:var(--cyan)">"full audit"</strong> to trigger all 6 engines</span></div>
+              <div class="cap"><span>→</span><span>Get Audit Report, Fixed Contract + Attack Simulation — all on Walrus</span></div>
+              <div class="cap"><span>→</span><span>Ask any security question conversationally</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="input-bar">
+          <div class="input-row">
+            <textarea class="msg-input" id="msgInput"
+              placeholder="Ask a security question or say 'full audit'..."
+              rows="1" onkeydown="handleKey(event)"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="send()">➤</button>
+          </div>
+          <div class="input-hint">Enter to send · Shift+Enter new line · Powered by n8n + Claude + Walrus</div>
+        </div>
+      </div>
+
+      <!-- AUDIT REPORT PANEL -->
+      <div class="panel" id="panel-audit">
+        <div class="summary-bar" id="auditSummaryBar" style="display:none;"></div>
+        <div class="result-panel" id="auditContent">
+          <div class="result-empty">
+            <div class="icon">📋</div>
+            <div>Run a <strong>full audit</strong> from the chat to generate your report</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FIXED CONTRACT PANEL -->
+      <div class="panel" id="panel-fix">
+        <div class="result-panel" id="fixContent">
+          <div class="result-empty">
+            <div class="icon">🔧</div>
+            <div>AutoFix will generate a corrected contract<br/>after your first full audit</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ATTACK SIM PANEL -->
+      <div class="panel" id="panel-sim">
+        <div class="result-panel" id="simContent">
+          <div class="result-empty">
+            <div class="icon">💀</div>
+            <div>Attack Simulation Engine will simulate<br/>real exploits after your first full audit</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── CONFIG ─────────────────────────────────────────
+  // Paste your n8n production webhook URL below
+  const WEBHOOK_URL = '/api/webhook';
+  // ───────────────────────────────────────────────────
+
+  let history = [];
+  let loading = false;
+  let sessionId = 'SG-' + Math.random().toString(36).substring(2,8).toUpperCase();
+
+  /* ── TAB SWITCHING ── */
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+
+  /* ── QUICK ACTIONS ── */
+  function quick(text) {
+    document.getElementById('msgInput').value = text;
+    send();
+  }
+
+  /* ── KEY HANDLER ── */
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  }
+
+  /* ── SEND MESSAGE ── */
+  async function send() {
+    if (loading) return;
+    const input   = document.getElementById('msgInput');
+    const message = input.value.trim();
+    if (!message) return;
+
+    const code    = document.getElementById('contractCode').value.trim();
+    const project = document.getElementById('projectName').value.trim() || 'My Project';
+
+    appendMsg('user', message);
+    history.push({ role: 'user', content: message });
+    input.value = '';
+    input.style.height = 'auto';
+
+    const tid = showThinking();
+    setLoading(true);
+
+    try {
+      // 120 second timeout to handle slow Opus responses
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+      const res = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          message, contract_code: code,
+          history: history.slice(-10),
+          session_id: sessionId,
+          project_name: project
+        })
+      });
+
+      clearTimeout(timeoutId);
+
+      const data = await res.json();
+      removeThinking(tid);
+      history.push({ role: 'assistant', content: data.reply || data.audit_report || '' });
+
+      if (data.is_audit) {
+        handleFullAudit(data, project);
+      } else {
+        appendMsg('assistant', data.reply || 'No response received.');
+      }
+
+    } catch(err) {
+      removeThinking(tid);
+      if (err.name === 'AbortError') {
+        appendMsg('assistant', '⏱️ Request timed out after 120 seconds. The Claude API may be slow. Please try again.');
+      } else {
+        appendMsg('assistant',
+          `❌ Connection error: ${err.message}\n\nCheck your n8n webhook URL in the script config.`);
+      }
+    }
+
+    setLoading(false);
+  }
+
+  /* ── HANDLE FULL AUDIT RESPONSE ── */
+  function handleFullAudit(data, project) {
+    const w = data.walrus || {};
+
+    // Fix Walrus links to use correct /v1/blobs/ path
+    const fixWalrusLink = (link) => link ? link.replace('/v1/', '/v1/blobs/') : null;
+    const auditLink = fixWalrusLink(w.audit_link);
+    const fixLink   = fixWalrusLink(w.fix_link);
+    const simLink   = fixWalrusLink(w.sim_link);
+
+    // Build walrus pills HTML
+    const pillsHtml = `
+      <div class="walrus-row">
+        ${auditLink ? `<a class="w-pill w-audit" href="${auditLink}" target="_blank">🌊 Audit Report ↗</a>` : ''}
+        ${fixLink   ? `<a class="w-pill w-fix"   href="${fixLink}"   target="_blank">🔧 Fixed Contract ↗</a>` : ''}
+        ${simLink   ? `<a class="w-pill w-sim"   href="${simLink}"   target="_blank">💀 Attack Sim ↗</a>` : ''}
+      </div>`;
+
+    // Chat bubble
+    const shortReport = extractShortSummary(data.audit_report || '');
+    appendMsg('assistant', shortReport + '\n\n**All outputs stored on Walrus:**', false, pillsHtml);
+
+    // Populate tabs with fixed links
+    if (data.audit_report)      renderAuditTab(data.audit_report, auditLink);
+    if (data.fixed_contract)    renderFixTab(data.fixed_contract, fixLink);
+    if (data.attack_simulation) renderSimTab(data.attack_simulation, simLink);
+
+    // Update tab badges
+    updateBadge('audit', '✓');
+    updateBadge('fix',   '✓');
+    updateBadge('sim',   '✓');
+
+    // Walrus sidebar log with fixed links
+    const walrusFixed = {};
+    walrusFixed.audit_link = auditLink;
+    walrusFixed.fix_link   = fixLink;
+    walrusFixed.sim_link   = simLink;
+    addWalrusEntry(project, walrusFixed);
+  }
+
+  /* ── EXTRACT SHORT SUMMARY FOR CHAT BUBBLE ── */
+  function extractShortSummary(text) {
+    const clean = text.replace('---AUDIT REPORT START---','').replace('---AUDIT REPORT END---','');
+    const riskMatch  = clean.match(/\*\*Risk Level:\*\*\s*(.+)/);
+    const summMatch  = clean.match(/\*\*Summary:\*\*\s*([\s\S]+?)(?=\n---|\n##)/);
+    const risk   = riskMatch  ? riskMatch[1].trim()  : 'See report';
+    const summary = summMatch ? summMatch[1].trim().split('\n')[0] : 'Full audit complete.';
+    return `**Audit Complete · Risk Level: ${risk}**\n\n${summary}\n\nCheck the tabs above for the full report, fixed contract, and attack simulations.`;
+  }
+
+  /* ── RENDER AUDIT TAB ── */
+  function renderAuditTab(text, link) {
+    const clean = text
+      .replace('---AUDIT REPORT START---','')
+      .replace('---AUDIT REPORT END---','');
+
+    let html = `<div class="rh1">📋 Security Audit Report
+      ${link ? `<a href="${link}" target="_blank" style="float:right;color:var(--cyan);font-size:.65rem;">View on Walrus ↗</a>` : ''}
+    </div>`;
+
+    html += formatResultText(clean);
+
+    // Count findings for summary bar
+    const crits  = (text.match(/CRITICAL/g)||[]).length;
+    const highs  = (text.match(/\bHIGH\b/g)||[]).length;
+    const meds   = (text.match(/MEDIUM/g)||[]).length;
+    const lows   = (text.match(/\bLOW\b/g)||[]).length;
+
+    const bar = document.getElementById('auditSummaryBar');
+    bar.style.display = 'flex';
+    bar.innerHTML = `
+      <div class="sstat"><span class="sstat-val sc">${crits}</span><span style="color:var(--dim)">Critical</span></div>
+      <div class="sstat"><span class="sstat-val sh">${highs}</span><span style="color:var(--dim)">High</span></div>
+      <div class="sstat"><span class="sstat-val sm">${meds}</span><span style="color:var(--dim)">Medium</span></div>
+      <div class="sstat"><span class="sstat-val sl">${lows}</span><span style="color:var(--dim)">Low</span></div>
+    `;
+
+    document.getElementById('auditContent').innerHTML = html;
+  }
+
+  /* ── RENDER FIX TAB ── */
+  function renderFixTab(text, link) {
+    const clean = text
+      .replace('---FIXED CONTRACT START---','')
+      .replace('---FIXED CONTRACT END---','');
+
+    // Split code from fixes list
+    const splitIdx = clean.indexOf('## FIXES APPLIED');
+    const code  = splitIdx > -1 ? clean.substring(0, splitIdx).trim() : clean;
+    const fixes = splitIdx > -1 ? clean.substring(splitIdx) : '';
+
+    let html = `<div class="rh1">🔧 AutoFixed Contract
+      ${link ? `<a href="${link}" target="_blank" style="float:right;color:var(--green);font-size:.65rem;">Download from Walrus ↗</a>` : ''}
+    </div>`;
+
+    html += `<div style="position:relative;">
+      <button class="copy-btn" onclick="copyCode('fixCode')">Copy</button>
+      <div class="rcode" id="fixCode">${escHtml(code)}</div>
+    </div>`;
+
+    if (fixes) {
+      html += `<div class="rh1" style="margin-top:20px;">Changes Made</div>`;
+      html += formatResultText(fixes.replace('## FIXES APPLIED',''));
+    }
+
+    document.getElementById('fixContent').innerHTML = html;
+  }
+
+  /* ── RENDER SIM TAB ── */
+  function renderSimTab(text, link) {
+    const clean = text
+      .replace('---SIMULATION START---','')
+      .replace('---SIMULATION END---','');
+
+    let html = `<div class="rh1">💀 Attack Simulation Report
+      ${link ? `<a href="${link}" target="_blank" style="float:right;color:var(--orange);font-size:.65rem;">View on Walrus ↗</a>` : ''}
+    </div>
+    <div style="background:#180a03;border:1px solid #431407;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-family:var(--mono);font-size:.72rem;color:var(--orange);">
+      ⚠️ Simulation only — no real transactions executed. All exploits are proof-of-concept on testnet.
+    </div>`;
+
+    html += formatResultText(clean);
+    document.getElementById('simContent').innerHTML = html;
+  }
+
+  /* ── FORMAT RESULT TEXT ── */
+  function formatResultText(text) {
+    let html = escHtml(text);
+
+    // Code blocks
+    html = html.replace(/```[\w]*\n?([\s\S]*?)```/g, (_,c) =>
+      `<div class="rcode">${c.trim()}</div>`);
+
+    // Headers
+    html = html.replace(/^## (.+)$/gm,  '<div class="rh1">$1</div>');
+    html = html.replace(/^### (.+)$/gm, '<div class="rh2">$1</div>');
+
+    // Bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // Verdict coloring
+    html = html.replace(/\b(CRITICAL)\b/g, '<span class="v-crit">CRITICAL</span>');
+    html = html.replace(/\b(HIGH)\b/g,      '<span class="v-high">HIGH</span>');
+    html = html.replace(/\b(MEDIUM)\b/g,    '<span class="v-warn">MEDIUM</span>');
+    html = html.replace(/\bSAFE\b/g,        '<span class="v-safe">SAFE</span>');
+    html = html.replace(/\bCLEAN\b/g,       '<span class="v-safe">CLEAN</span>');
+    html = html.replace(/✅/g, '<span style="color:var(--green)">✅</span>');
+    html = html.replace(/❌/g, '<span style="color:var(--red)">❌</span>');
+    html = html.replace(/⚠️/g, '<span style="color:var(--yellow)">⚠️</span>');
+    html = html.replace(/\n/g, '<br/>');
+
+    return html;
+  }
+
+  /* ── CHAT BUBBLE ── */
+  function appendMsg(role, text, skipFormat = false, extraHtml = '') {
+    const msgs = document.getElementById('messages');
+    const wrap = document.createElement('div');
+    wrap.className = `msg ${role}`;
+
+    const av = document.createElement('div');
+    av.className = 'avatar';
+    av.textContent = role === 'user' ? '👤' : '🛡️';
+
+    const bub = document.createElement('div');
+    bub.className = 'bubble';
+    bub.innerHTML = formatChat(text) + extraHtml;
+
+    wrap.appendChild(av);
+    wrap.appendChild(bub);
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function formatChat(text) {
+    let h = escHtml(text);
+    h = h.replace(/```[\w]*\n?([\s\S]*?)```/g, (_,c) => `<pre>${c.trim()}</pre>`);
+    h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+    h = h.replace(/^## (.+)$/gm, '<strong style="color:var(--cyan)">$1</strong>');
+    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    h = h.replace(/\b(CRITICAL|UNSAFE)\b/g, '<span class="v-crit">$1</span>');
+    h = h.replace(/\b(HIGH)\b/g,   '<span class="v-high">$1</span>');
+    h = h.replace(/\b(CAUTION|MEDIUM)\b/g, '<span class="v-warn">$1</span>');
+    h = h.replace(/\b(SAFE|CLEAN|PASS)\b/g,'<span class="v-safe">$1</span>');
+    h = h.replace(/✅/g,'<span style="color:var(--green)">✅</span>');
+    h = h.replace(/❌/g,'<span style="color:var(--red)">❌</span>');
+    h = h.replace(/\n/g,'<br/>');
+    return h;
+  }
+
+  /* ── THINKING INDICATOR ── */
+  function showThinking() {
+    const id = 'th-' + Date.now();
+    const msgs = document.getElementById('messages');
+    const d = document.createElement('div');
+    d.id = id; d.className = 'msg assistant';
+    d.innerHTML = `<div class="avatar">🛡️</div>
+      <div class="thinking">
+        <div class="dots"><span></span><span></span><span></span></div>
+        Analyzing contract...
+      </div>`;
+    msgs.appendChild(d);
+    msgs.scrollTop = msgs.scrollHeight;
+    return id;
+  }
+
+  function removeThinking(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  /* ── WALRUS SIDEBAR ── */
+  function addWalrusEntry(project, w) {
+    const log = document.getElementById('walrusLog');
+    const empty = log.querySelector('.wentry-empty');
+    if (empty) empty.remove();
+
+    const d = document.createElement('div');
+    d.className = 'wentry';
+    d.innerHTML = `
+      <div class="wentry-time">${new Date().toLocaleTimeString()}</div>
+      <div class="wentry-proj">📋 ${project}</div>
+      <div class="wentry-links">
+        ${w.audit_link ? `<div class="wentry-link" onclick="window.open('${w.audit_link}','_blank')">🌊 Audit Report</div>` : ''}
+        ${w.fix_link   ? `<div class="wentry-link" onclick="window.open('${w.fix_link}','_blank')">🔧 Fixed Contract</div>` : ''}
+        ${w.sim_link   ? `<div class="wentry-link" onclick="window.open('${w.sim_link}','_blank')">💀 Attack Sim</div>` : ''}
+      </div>`;
+    log.insertBefore(d, log.firstChild);
+  }
+
+  /* ── UTILS ── */
+  function setLoading(s) {
+    loading = s;
+    const b = document.getElementById('sendBtn');
+    b.disabled = s;
+    b.textContent = s ? '⏳' : '➤';
+  }
+
+  function updateBadge(tab, val) {
+    const el = document.getElementById('badge-' + tab);
+    if (el) el.textContent = val;
+  }
+
+  function escHtml(t) {
+    return String(t)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function copyCode(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    navigator.clipboard.writeText(el.textContent).then(() => {
+      const btn = el.previousElementSibling;
+      if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 1500); }
+    });
+  }
+
+  // Auto-resize textarea
+  document.getElementById('msgInput').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 110) + 'px';
+  });
+</script>
+</body>
+</html>
